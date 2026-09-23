@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Knowledge Library · Deva AI{% endblock %}
+{% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1>Knowledge Library</h1>
+    <div style="display:flex;gap:10px;">
+      <input type="text" id="kb-search" placeholder="Search knowledge…" style="width:220px;">
+      <label class="btn btn-primary" style="cursor:pointer;">
+        Upload Document
+        <input type="file" id="kb-upload" accept=".pdf,.txt,.md" style="display:none;">
+      </label>
+    </div>
+  </div>
+  <p style="color:var(--text-2);font-size:13px;max-width:640px;margin-bottom:24px;">
+    Uploaded PDFs, text and Markdown files are chunked and indexed for retrieval. Deva pulls relevant
+    excerpts into context only when you enable "Knowledge Library" in the chat composer — it never
+    loads your whole library into every prompt.
+  </p>
+  <div id="kb-search-results" style="margin-bottom:20px;"></div>
+  <div class="card-grid" id="kb-list"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadDocs() {
+  const list = document.getElementById('kb-list');
+  try {
+    const docs = await Deva.api('/api/knowledge/documents');
+    if (!docs.length) { list.innerHTML = '<div class="empty-state">No documents yet. Upload a PDF, TXT or MD file, or save research findings from the Research page.</div>'; return; }
+    list.innerHTML = docs.map(d => `
+      <div class="glass list-item">
+        <div>
+          <h4>${Deva.escapeHtml(d.title)}</h4>
+          <p>${d.source_type === 'research' ? 'From research' : 'Uploaded'} · ${d.indexed ? 'Indexed' : 'Not indexed'} ${d.retrieved_at ? '· ' + d.retrieved_at.slice(0,10) : ''}</p>
+        </div>
+        <div class="row-actions">
+          <button data-del="${d.id}">Delete</button>
+        </div>
+      </div>`).join('');
+    list.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Delete this document?')) return;
+      await Deva.api(`/api/knowledge/documents/${btn.dataset.del}`, { method: 'DELETE' });
+      loadDocs();
+    }));
+  } catch (e) {
+    list.innerHTML = '<div class="empty-state">Could not load knowledge library.</div>';
+  }
+}
+loadDocs();
+
+document.getElementById('kb-upload').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const resp = await fetch('/api/knowledge/upload', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Upload failed');
+    Deva.toast(`"${data.title}" indexed`, 'success');
+    loadDocs();
+  } catch (err) {
+    Deva.toast(err.message, 'error');
+  }
+  e.target.value = '';
+});
+
+const searchInput = document.getElementById('kb-search');
+let searchTimeout;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(async () => {
+    const q = searchInput.value.trim();
+    const resultsEl = document.getElementById('kb-search-results');
+    if (!q) { resultsEl.innerHTML = ''; return; }
+    const results = await Deva.api(`/api/knowledge/search?q=${encodeURIComponent(q)}`);
+    if (!results.length) { resultsEl.innerHTML = '<div class="empty-state">No matches.</div>'; return; }
+    resultsEl.innerHTML = results.map(r => `
+      <div class="glass" style="padding:14px 16px;margin-bottom:8px;">
+        <strong style="font-size:13px;">${Deva.escapeHtml(r.title || 'Untitled')}</strong>
+        <p style="font-size:12.5px;color:var(--text-2);margin-top:4px;">${Deva.escapeHtml(r.content.slice(0,220))}…</p>
+      </div>`).join('');
+  }, 300);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Settings · Deva AI{% endblock %}
+{% block content %}
+<div class="page-content">
+  <div class="page-header"><h1>Settings</h1></div>
+
+  <div class="settings-tabs">
+    <div class="settings-tab active" data-tab="ai">AI</div>
+    <div class="settings-tab" data-tab="personalization">Personalization</div>
+    <div class="settings-tab" data-tab="research">Research</div>
+    <div class="settings-tab" data-tab="voice">Voice</div>
+    <div class="settings-tab" data-tab="appearance">Appearance</div>
+    <div class="settings-tab" data-tab="data">Data &amp; Privacy</div>
+  </div>
+
+  <div class="settings-panel active" data-panel="ai">
+    <div class="form-grid glass" style="padding:22px;">
+      <div class="form-field"><label>Ollama URL</label><input id="s-ollama-url"></div>
+      <div class="form-field"><label>Model</label><input id="s-ollama-model"></div>
+      <div class="form-row">
+        <div class="form-field"><label>Temperature</label><input id="s-temperature" type="number" step="0.1" min="0" max="2"></div>
+        <div class="form-field"><label>Max Response Tokens</label><input id="s-max-tokens" type="number"></div>
+      </div>
+      <div class="form-field"><label>Extra System Prompt Instructions</label><textarea id="s-system-extra" rows="3" placeholder="Optional — appended to every conversation's system prompt"></textarea></div>
+      <div id="ollama-status" style="font-size:12.5px;color:var(--text-2);"></div>
+    </div>
+  </div>
+
+  <div class="settings-panel" data-panel="personalization">
+    <div class="form-grid glass" style="padding:22px;">
+      <p style="color:var(--text-2);font-size:13px;">Owner identity fields (name, skills, projects) live on the <a href="/profile" style="color:var(--violet-soft);">Owner Profile</a> page.</p>
+    </div>
+  </div>
+
+  <div class="settings-panel" data-panel="research">
+    <div class="form-grid glass" style="padding:22px;">
+      <div class="form-field"><label>Search Provider</label>
+        <select id="s-research-provider"><option value="duckduckgo">DuckDuckGo (no API key required)</option></select>
+      </div>
+      <p style="color:var(--text-2);font-size:12.5px;">Additional providers (Bing, SerpAPI) can be added in <code>research/search_service.py</code> and would need an API key configured in <code>.env</code>.</p>
+    </div>
+  </div>
+
+  <div class="settings-panel" data-panel="voice">
+    <div class="form-grid glass" style="padding:22px;">
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;"><input type="checkbox" id="s-voice-input"> Enable voice input on Assistant page</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;"><input type="checkbox" id="s-voice-output"> Enable speech output by default</label>
+      <p style="color:var(--text-2);font-size:12.5px;">Voice input/output use your browser's built-in Web Speech APIs. Speech recognition typically requires an internet-connected browser session — it is not a fully offline feature, even though local chat is.</p>
+    </div>
+  </div>
+
+  <div class="settings-panel" data-panel="appearance">
+    <div class="form-grid glass" style="padding:22px;">
+      <div class="form-field"><label>Theme</label>
+        <select id="s-theme"><option value="dark">Dark (default)</option><option value="light">Light — not yet implemented</option></select>
+      </div>
+      <div class="form-field"><label>Accent Color</label>
+        <select id="s-accent"><option value="violet">Violet / Cyan</option><option value="blue">Blue / Teal</option></select>
+      </div>
+      <div class="form-field"><label>Animation Intensity</label>
+        <select id="s-anim"><option value="normal">Normal</option><option value="reduced">Reduced</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-panel" data-panel="data">
+    <div class="form-grid glass" style="padding:22px;">
+      <button class="btn btn-ghost" id="export-data-btn">Export All Data</button>
+      <button class="btn btn-ghost" id="clear-chat-btn">Clear Chat History</button>
+      <button class="btn btn-ghost" id="clear-kb-btn">Clear Knowledge Library</button>
+      <button class="btn" style="border-color:var(--danger);color:var(--danger);" id="reset-all-btn">Reset All Application Data</button>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;">
+    <button class="btn btn-primary" id="save-settings-btn">Save Settings</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll('.settings-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelector(`[data-panel="${tab.dataset.tab}"]`).classList.add('active');
+  });
+});
+
+async function loadSettings() {
+  const s = await Deva.api('/api/settings');
+  document.getElementById('s-ollama-url').value = s.ollama_url;
+  document.getElementById('s-ollama-model').value = s.ollama_model;
+  document.getElementById('s-temperature').value = s.temperature;
+  document.getElementById('s-max-tokens').value = s.max_tokens;
+  document.getElementById('s-system-extra').value = s.system_prompt_extra;
+  document.getElementById('s-research-provider').value = s.research_provider;
+  document.getElementById('s-voice-input').checked = s.voice_input_enabled === 'true';
+  document.getElementById('s-voice-output').checked = s.voice_output_enabled === 'true';
+  document.getElementById('s-theme').value = s.theme;
+  document.getElementById('s-accent').value = s.accent_color;
+  document.getElementById('s-anim').value = s.animation_intensity;
+
+  const health = await Deva.api('/api/health');
+  const statusEl = document.getElementById('ollama-status');
+  const o = health.ollama;
+  statusEl.innerHTML = o.ok
+    ? `Connected. Available models: ${o.models.join(', ') || 'none'}. Selected model available: ${o.selected_model_available ? 'Yes' : 'No — run: ollama pull ' + o.selected_model}`
+    : `Not reachable: ${o.error}`;
+}
+loadSettings();
+
+document.getElementById('save-settings-btn').addEventListener('click', async () => {
+  await Deva.api('/api/settings', { method: 'POST', body: {
+    ollama_url: document.getElementById('s-ollama-url').value,
+    ollama_model: document.getElementById('s-ollama-model').value,
+    temperature: document.getElementById('s-temperature').value,
+    max_tokens: document.getElementById('s-max-tokens').value,
+    system_prompt_extra: document.getElementById('s-system-extra').value,
+    research_provider: document.getElementById('s-research-provider').value,
+    voice_input_enabled: document.getElementById('s-voice-input').checked,
+    voice_output_enabled: document.getElementById('s-voice-output').checked,
+    theme: document.getElementById('s-theme').value,
+    accent_color: document.getElementById('s-accent').value,
+    animation_intensity: document.getElementById('s-anim').value,
+  }});
+  Deva.toast('Settings saved', 'success');
+});
+
+document.getElementById('export-data-btn').addEventListener('click', async () => {
+  const data = await Deva.api('/api/data/export');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'deva-ai-export.json'; a.click();
+});
+document.getElementById('clear-chat-btn').addEventListener('click', async () => {
+  if (!confirm('Delete all chat history? This cannot be undone.')) return;
+  await Deva.api('/api/data/clear-chat', { method: 'POST' });
+  Deva.toast('Chat history cleared', 'success');
+});
+document.getElementById('clear-kb-btn').addEventListener('click', async () => {
+  if (!confirm('Delete the entire knowledge library? This cannot be undone.')) return;
+  await Deva.api('/api/data/clear-knowledge', { method: 'POST' });
+  Deva.toast('Knowledge library cleared', 'success');
+});
+document.getElementById('reset-all-btn').addEventListener('click', async () => {
+  if (!confirm('Reset ALL application data (chats, memories, knowledge, settings)? This cannot be undone.')) return;
+  await Deva.api('/api/data/reset-all', { method: 'POST' });
+  Deva.toast('Application data reset', 'success');
+  loadSettings();
+});
+</script>
+{% endblock %}

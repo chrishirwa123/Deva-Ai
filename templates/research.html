@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Research · Deva AI{% endblock %}
+{% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1>Online Research</h1>
+    <span id="net-badge" class="badge"><span class="badge-dot" style="background:var(--cyan)"></span> Checking network…</span>
+  </div>
+
+  <div class="composer glass" style="max-width:720px;margin-bottom:26px;">
+    <textarea id="research-input" rows="1" placeholder="What should Deva research? e.g. 'Latest developments in ESP32 robotics'"></textarea>
+    <button class="send-btn" id="research-send" title="Start research">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+  </div>
+
+  <div id="research-result" style="max-width:720px;"></div>
+
+  <h3 style="margin:34px 0 14px;font-size:16px;color:var(--text-1);">Research History</h3>
+  <div class="card-grid" id="research-history"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const netBadge = document.getElementById('net-badge');
+function updateNetBadge() {
+  if (navigator.onLine) { netBadge.className = 'badge badge-ok'; netBadge.innerHTML = '<span class="badge-dot"></span> Online — research available'; }
+  else { netBadge.className = 'badge badge-error'; netBadge.innerHTML = '<span class="badge-dot"></span> Offline — research unavailable until reconnected'; }
+}
+window.addEventListener('online', updateNetBadge);
+window.addEventListener('offline', updateNetBadge);
+updateNetBadge();
+
+const input = document.getElementById('research-input');
+const sendBtn = document.getElementById('research-send');
+const resultEl = document.getElementById('research-result');
+
+sendBtn.addEventListener('click', runResearch);
+input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runResearch(); } });
+
+async function runResearch() {
+  const query = input.value.trim();
+  if (!query) return;
+  if (!navigator.onLine) {
+    Deva.toast('You appear to be offline — research cannot run right now.', 'error');
+    return;
+  }
+  resultEl.innerHTML = `<div class="glass" style="padding:20px;display:flex;align-items:center;gap:10px;"><span class="spinner"></span> Researching "${Deva.escapeHtml(query)}"…</div>`;
+  sendBtn.disabled = true;
+  try {
+    const task = await Deva.api('/api/research/tasks', { method: 'POST', body: { query } });
+    renderTask(task);
+  } catch (e) {
+    resultEl.innerHTML = `<div class="glass" style="padding:20px;color:var(--danger)">⚠ ${Deva.escapeHtml(e.message)}</div>`;
+  } finally {
+    sendBtn.disabled = false;
+    loadHistory();
+  }
+}
+
+function renderTask(task) {
+  if (task.status === 'error') {
+    resultEl.innerHTML = `<div class="glass" style="padding:20px;color:var(--danger)">⚠ ${Deva.escapeHtml(task.error || 'Research failed')}</div>`;
+    return;
+  }
+  const sources = (task.sources || []).map(s => `<li><a href="${s.url}" target="_blank" rel="noopener">${Deva.escapeHtml(s.title || s.url)}</a></li>`).join('');
+  resultEl.innerHTML = `
+    <div class="glass" style="padding:22px;">
+      <h3 style="margin-bottom:10px;">${Deva.escapeHtml(task.query)}</h3>
+      <div style="white-space:pre-wrap;line-height:1.6;font-size:14.5px;color:var(--text-0);">${Deva.escapeHtml(task.summary || '')}</div>
+      <div style="margin-top:14px;font-size:12.5px;color:var(--text-2);">Sources</div>
+      <ul style="font-size:13px;padding-left:18px;">${sources}</ul>
+      <div style="margin-top:10px;font-size:12px;color:var(--text-2);">Saved to Knowledge Library</div>
+    </div>`;
+}
+
+async function loadHistory() {
+  const historyEl = document.getElementById('research-history');
+  try {
+    const tasks = await Deva.api('/api/research/tasks');
+    if (!tasks.length) { historyEl.innerHTML = '<div class="empty-state">No research tasks yet.</div>'; return; }
+    historyEl.innerHTML = tasks.map(t => `
+      <div class="glass list-item" style="cursor:pointer;flex-direction:column;align-items:flex-start;" data-id="${t.id}">
+        <h4>${Deva.escapeHtml(t.query)}</h4>
+        <p>${t.status} · ${t.created_at}</p>
+      </div>`).join('');
+    historyEl.querySelectorAll('[data-id]').forEach(el => {
+      el.addEventListener('click', async () => {
+        const task = await Deva.api(`/api/research/tasks/${el.dataset.id}`);
+        renderTask(task);
+        window.scrollTo({top:0, behavior:'smooth'});
+      });
+    });
+  } catch (e) {
+    historyEl.innerHTML = '<div class="empty-state">Could not load research history.</div>';
+  }
+}
+loadHistory();
+</script>
+{% endblock %}

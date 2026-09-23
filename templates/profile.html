@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Owner Profile · Deva AI{% endblock %}
+{% block content %}
+<div class="page-content">
+  <div class="page-header"><h1>Owner Profile</h1></div>
+
+  <div class="form-grid glass" style="padding:24px;">
+    <div class="form-row">
+      <div class="form-field"><label>AI Name</label><input type="text" id="f-ai-name"></div>
+      <div class="form-field"><label>Preferred Name</label><input type="text" id="f-preferred-name"></div>
+    </div>
+    <div class="form-field"><label>Skills (comma separated)</label><input type="text" id="f-skills"></div>
+    <div class="form-field"><label>Interests (comma separated)</label><input type="text" id="f-interests"></div>
+    <div class="form-field"><label>Goals (comma separated)</label><input type="text" id="f-goals"></div>
+    <div class="form-field"><label>Projects (comma separated)</label><input type="text" id="f-projects"></div>
+    <div class="form-field"><label>Communication Preferences</label><textarea id="f-comm" rows="2"></textarea></div>
+    <div class="form-field"><label>Notes</label><textarea id="f-notes" rows="3"></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" id="save-profile-btn">Save Profile</button>
+      <button class="btn btn-ghost" id="export-btn">Export All Data (JSON)</button>
+    </div>
+  </div>
+
+  <div style="margin-top:18px;font-size:12.5px;color:var(--text-2);max-width:560px;">
+    Creator: <strong id="creator-name" style="color:var(--text-1)"></strong> · This profile is stored locally
+    at <code>identity/owner_profile.json</code> and is never sent anywhere unless you run an online research task.
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toList(str) { return str.split(',').map(s => s.trim()).filter(Boolean); }
+function fromList(arr) { return (arr || []).join(', '); }
+
+async function loadProfile() {
+  const p = await Deva.api('/api/profile');
+  document.getElementById('f-ai-name').value = p.ai_name || '';
+  document.getElementById('f-preferred-name').value = p.preferred_name || '';
+  document.getElementById('f-skills').value = fromList(p.skills);
+  document.getElementById('f-interests').value = fromList(p.interests);
+  document.getElementById('f-goals').value = fromList(p.goals);
+  document.getElementById('f-projects').value = fromList(p.projects);
+  document.getElementById('f-comm').value = p.communication_preferences || '';
+  document.getElementById('f-notes').value = p.notes || '';
+  document.getElementById('creator-name').textContent = p.creator || 'Unknown';
+}
+loadProfile();
+
+document.getElementById('save-profile-btn').addEventListener('click', async () => {
+  await Deva.api('/api/profile', { method: 'POST', body: {
+    ai_name: document.getElementById('f-ai-name').value,
+    preferred_name: document.getElementById('f-preferred-name').value,
+    skills: toList(document.getElementById('f-skills').value),
+    interests: toList(document.getElementById('f-interests').value),
+    goals: toList(document.getElementById('f-goals').value),
+    projects: toList(document.getElementById('f-projects').value),
+    communication_preferences: document.getElementById('f-comm').value,
+    notes: document.getElementById('f-notes').value,
+  }});
+  Deva.toast('Profile saved', 'success');
+});
+
+document.getElementById('export-btn').addEventListener('click', async () => {
+  const data = await Deva.api('/api/data/export');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'deva-ai-export.json';
+  a.click();
+});
+</script>
+{% endblock %}

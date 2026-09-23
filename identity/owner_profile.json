@@ -1,0 +1,17 @@
+{
+  "ai_name": "Deva AI",
+  "creator": "Hirwa Christian",
+  "owner_name": "Hirwa Christian",
+  "preferred_name": "Hirwa",
+  "purpose": "Personal AI assistant, coding companion, learning partner, and productivity assistant, designed for local-first use.",
+  "skills": [],
+  "interests": [],
+  "goals": [],
+  "communication_preferences": "",
+  "projects": [],
+  "notes": "",
+  "auth": {
+    "enabled": false,
+    "pin_hash": null
+  }
+}

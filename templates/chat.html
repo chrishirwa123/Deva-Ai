@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Chat · Deva AI{% endblock %}
+{% block content %}
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <strong id="chat-title-label">Deva AI</strong>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <span id="health-badge" class="badge badge-warn"><span class="badge-dot"></span> Checking Ollama…</span>
+  </div>
+</div>
+
+<div class="chat-scroll" id="chat-scroll">
+  <div class="chat-inner" id="chat-inner">
+    <div class="welcome-screen" id="welcome-screen">
+      <h1>Intelligence that stays with you.</h1>
+      <p>Ask Deva anything. Everything runs locally through your Ollama model — nothing leaves this machine unless you explicitly start a research task.</p>
+      <div class="suggestion-grid">
+        <div class="glass suggestion-card" data-fill="What can you help me with?">
+          <div class="s-title">What can you help me with?</div>
+          <div class="s-sub">Get an overview of Deva's capabilities</div>
+        </div>
+        <div class="glass suggestion-card" data-fill="Remember that I prefer concise answers.">
+          <div class="s-title">Remember that I prefer concise answers.</div>
+          <div class="s-sub">Save a fact to long-term memory</div>
+        </div>
+        <div class="glass suggestion-card" data-fill="Explain how your knowledge library works.">
+          <div class="s-title">Explain how your knowledge library works</div>
+          <div class="s-sub">Learn about offline document retrieval</div>
+        </div>
+        <div class="glass suggestion-card" data-fill="What is your name and who created you?">
+          <div class="s-title">What is your name and who created you?</div>
+          <div class="s-sub">Check Deva's identity</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="composer-wrap">
+  <div class="composer glass">
+    <textarea id="composer-input" rows="1" placeholder="Message Deva AI…"></textarea>
+    <div class="composer-tools">
+      <button id="knowledge-toggle" title="Use Knowledge Library for this message">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </button>
+      <button id="stop-btn" title="Stop generating" style="display:none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      </button>
+    </div>
+    <button class="send-btn" id="send-btn" title="Send">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+  <div class="composer-hint">Enter to send · Shift+Enter for a new line · Deva runs on your local Ollama model</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+window.DEVA_CONV_ID = {{ conv_id | tojson }};
+let convId = {{ conv_id | tojson }};
+let useKnowledge = false;
+let currentAbort = null;
+
+const scrollEl = document.getElementById('chat-scroll');
+const innerEl = document.getElementById('chat-inner');
+const welcomeEl = document.getElementById('welcome-screen');
+const input = document.getElementById('composer-input');
+const sendBtn = document.getElementById('send-btn');
+const stopBtn = document.getElementById('stop-btn');
+const knowledgeToggle = document.getElementById('knowledge-toggle');
+
+Deva.refreshHealthBadge('health-badge');
+setInterval(() => Deva.refreshHealthBadge('health-badge'), 15000);
+
+knowledgeToggle.addEventListener('click', () => {
+  useKnowledge = !useKnowledge;
+  knowledgeToggle.classList.toggle('active', useKnowledge);
+  knowledgeToggle.title = useKnowledge ? 'Knowledge Library: ON' : 'Use Knowledge Library for this message';
+});
+
+document.querySelectorAll('.suggestion-card').forEach(card => {
+  card.addEventListener('click', () => { input.value = card.dataset.fill; input.focus(); autoGrow(); });
+});
+
+function autoGrow() {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+}
+input.addEventListener('input', autoGrow);
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+sendBtn.addEventListener('click', sendMessage);
+
+function addMessage(role, content, { streaming = false } = {}) {
+  welcomeEl.style.display = 'none';
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+  const avatarLabel = role === 'user' ? 'You' : 'D';
+  row.innerHTML = `
+    <div class="msg-avatar">${avatarLabel}</div>
+    <div class="msg-body">
+      <div class="msg-meta">${role === 'user' ? 'You' : 'Deva AI'}</div>
+      <div class="msg-content">${streaming ? '<span class="typing-dots"><span></span><span></span><span></span></span>' : Deva.renderMarkdown(content)}</div>
+      ${role === 'assistant' ? `<div class="msg-actions">
+        <button data-act="copy">Copy</button>
+      </div>` : ''}
+    </div>`;
+  innerEl.appendChild(row);
+  scrollEl.scrollTop = scrollEl.scrollHeight;
+  return row.querySelector('.msg-content');
+}
+
+async function ensureConversation() {
+  if (convId) return convId;
+  const conv = await Deva.api('/api/conversations', { method: 'POST' });
+  convId = conv.id;
+  window.history.replaceState({}, '', `/chat/${convId}`);
+  return convId;
+}
+
+async function loadExisting() {
+  if (!convId) return;
+  try {
+    const conv = await Deva.api(`/api/conversations/${convId}`);
+    document.getElementById('chat-title-label').textContent = conv.title;
+    if (conv.messages.length) welcomeEl.style.display = 'none';
+    conv.messages.forEach(m => addMessage(m.role, m.content));
+  } catch (e) {
+    Deva.toast('Could not load conversation', 'error');
+  }
+}
+loadExisting();
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = ''; autoGrow();
+  addMessage('user', text);
+  const assistantContentEl = addMessage('assistant', '', { streaming: true });
+  sendBtn.disabled = true; stopBtn.style.display = 'flex';
+
+  const id = await ensureConversation();
+  loadConversationList(id);
+
+  try {
+    const resp = await fetch(`/api/conversations/${id}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, use_knowledge: useKnowledge })
+    });
+    if (!resp.ok || !resp.body) throw new Error('Failed to reach Deva');
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+    let first = true;
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        if (!part.startsWith('data: ')) continue;
+        const payload = JSON.parse(part.slice(6));
+        if (payload.type === 'chunk') {
+          if (first) { assistantContentEl.innerHTML = ''; first = false; }
+          fullText += payload.content;
+          assistantContentEl.innerHTML = Deva.renderMarkdown(fullText);
+          scrollEl.scrollTop = scrollEl.scrollHeight;
+        } else if (payload.type === 'error') {
+          assistantContentEl.innerHTML = `<span style="color:var(--danger)">⚠ ${Deva.escapeHtml(payload.message)}</span>`;
+          if (payload.error === 'unavailable') {
+            assistantContentEl.innerHTML += `<div style="color:var(--text-2);font-size:13px;margin-top:6px;">Make sure Ollama is running: <code>ollama serve</code></div>`;
+          } else if (payload.error === 'model_missing') {
+            assistantContentEl.innerHTML += `<div style="color:var(--text-2);font-size:13px;margin-top:6px;">Pull the model: <code>ollama pull qwen3:1.7b</code></div>`;
+          }
+        } else if (payload.type === 'done') {
+          if (payload.memory_command) {
+            const cmd = payload.memory_command;
+            if (cmd.action === 'remember') {
+              if (confirm(`Save this to memory?\n\n"${cmd.content}"`)) {
+                await Deva.api('/api/memories', { method: 'POST', body: { content: cmd.content } });
+                Deva.toast('Saved to memory', 'success');
+              }
+            } else if (cmd.action === 'forget') {
+              Deva.toast(`To forget "${cmd.query}", open Personal Memory and delete the matching entry.`, 'info', 6000);
+            }
+          }
+        }
+      }
+    }
+    Deva.refreshHealthBadge('health-badge');
+  } catch (e) {
+    assistantContentEl.innerHTML = `<span style="color:var(--danger)">⚠ ${Deva.escapeHtml(e.message)}</span>`;
+  } finally {
+    sendBtn.disabled = false; stopBtn.style.display = 'none';
+  }
+}
+
+innerEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-act="copy"]');
+  if (!btn) return;
+  const content = btn.closest('.msg-body').querySelector('.msg-content').innerText;
+  navigator.clipboard.writeText(content);
+  Deva.toast('Copied to clipboard', 'success', 1500);
+});
+</script>
+{% endblock %}

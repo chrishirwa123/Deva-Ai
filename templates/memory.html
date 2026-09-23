@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Personal Memory · Deva AI{% endblock %}
+{% block content %}
+<div class="page-content">
+  <div class="page-header">
+    <h1>Personal Memory</h1>
+  </div>
+  <p style="color:var(--text-2);font-size:13px;max-width:640px;margin-bottom:20px;">
+    These are facts Deva has been told to remember — not raw chat history. Add, edit, or delete anything below.
+  </p>
+
+  <div class="form-row" style="max-width:620px;margin-bottom:24px;">
+    <input type="text" id="new-memory" placeholder="e.g. AgriSeed Rover uses two Arduinos">
+    <button class="btn btn-primary" id="add-memory-btn">Add</button>
+  </div>
+
+  <div class="card-grid" id="memory-list"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadMemories() {
+  const list = document.getElementById('memory-list');
+  try {
+    const memories = await Deva.api('/api/memories');
+    if (!memories.length) { list.innerHTML = '<div class="empty-state">Nothing saved yet.</div>'; return; }
+    list.innerHTML = memories.map(m => `
+      <div class="glass list-item">
+        <div>
+          <p style="color:var(--text-0);font-size:13.5px;">${Deva.escapeHtml(m.content)}</p>
+          <p style="margin-top:4px;">${m.updated_at}</p>
+        </div>
+        <div class="row-actions">
+          <button data-edit="${m.id}">Edit</button>
+          <button data-del="${m.id}">Delete</button>
+        </div>
+      </div>`).join('');
+    list.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Delete this memory?')) return;
+      await Deva.api(`/api/memories/${btn.dataset.del}`, { method: 'DELETE' });
+      loadMemories();
+    }));
+    list.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', async () => {
+      const current = memories.find(m => String(m.id) === btn.dataset.edit);
+      const updated = prompt('Edit memory:', current.content);
+      if (updated === null) return;
+      await Deva.api(`/api/memories/${btn.dataset.edit}`, { method: 'PATCH', body: { content: updated } });
+      loadMemories();
+    }));
+  } catch (e) {
+    list.innerHTML = '<div class="empty-state">Could not load memories.</div>';
+  }
+}
+loadMemories();
+
+document.getElementById('add-memory-btn').addEventListener('click', addMemory);
+document.getElementById('new-memory').addEventListener('keydown', (e) => { if (e.key === 'Enter') addMemory(); });
+
+async function addMemory() {
+  const input = document.getElementById('new-memory');
+  const content = input.value.trim();
+  if (!content) return;
+  await Deva.api('/api/memories', { method: 'POST', body: { content } });
+  input.value = '';
+  loadMemories();
+}
+</script>
+{% endblock %}
