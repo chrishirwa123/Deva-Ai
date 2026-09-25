@@ -2,14 +2,32 @@
   "ai_name": "Deva AI",
   "creator": "Hirwa Christian",
   "owner_name": "Hirwa Christian",
-  "preferred_name": "Hirwa",
+  "preferred_name": "Hirwa ",
   "purpose": "Personal AI assistant, coding companion, learning partner, and productivity assistant, designed for local-first use.",
-  "skills": [],
-  "interests": [],
-  "goals": [],
-  "communication_preferences": "",
-  "projects": [],
-  "notes": "",
+  "skills": [
+    "Embedded System",
+    "Robotics",
+    "AI",
+    "Web Development"
+  ],
+  "interests": [
+    "Coding",
+    "Music",
+    "Outdoor",
+    "going out with friends ."
+  ],
+  "goals": [
+    "Becoming All in all Engineer"
+  ],
+  "communication_preferences": "all kinds of communication",
+  "projects": [
+    "i got alot of projects",
+    "but many of them are related to Embedded System",
+    "Robotics",
+    "AI",
+    "Web Development"
+  ],
+  "notes": "Am just a kid with big dreams , no matter the audience",
   "auth": {
     "enabled": false,
     "pin_hash": null
