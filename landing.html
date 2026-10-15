@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deva AI | Intelligence That Stays With You</title>
+<meta name="description" content="Deva AI is a personal, local-first AI assistant that runs on your own machine through Ollama. Private by default, with memory, a knowledge library and optional online research.">
+<meta name="theme-color" content="#04070d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#04070d;
+  --navy:#0a1224;
+  --navy-2:#0f1b36;
+  --line:rgba(94,170,255,.18);
+  --arc:#38e1ff;
+  --cobalt:#2f6bff;
+  --ice:#e6f4ff;
+  --amber:#ffb454;
+  --text-1:#9db3d1;
+  --text-2:#6f86a8;
+  --display:'Chakra Petch','Segoe UI',system-ui,sans-serif;
+  --body:'Manrope','Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{background:var(--void);color:var(--ice);font-family:var(--body);line-height:1.65;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+   radial-gradient(900px 600px at 78% 8%,rgba(47,107,255,.16),transparent 60%),
+   radial-gradient(700px 500px at 8% 40%,rgba(56,225,255,.08),transparent 60%),
+   linear-gradient(180deg,#04070d,#060b17 50%,#04070d)}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--arc);outline-offset:3px;border-radius:6px}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.35}
+main,nav,footer,#progress{position:relative;z-index:2}
+#progress{position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,var(--cobalt),var(--arc));z-index:60;box-shadow:0 0 12px var(--arc)}
+
+/* typing caret */
+.typing::after{content:"";display:inline-block;width:.09em;height:.95em;margin-left:4px;background:var(--arc);vertical-align:-.12em;animation:blink .9s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* boot */
+#boot{position:fixed;inset:0;z-index:100;background:var(--void);display:grid;place-items:center;transition:opacity .7s,visibility .7s;cursor:pointer}
+#boot.hide{opacity:0;visibility:hidden}
+#boot pre{font-family:var(--mono);font-size:13px;color:var(--arc);line-height:1.9;min-width:min(380px,86vw)}
+#boot .ok{color:#5dffb0}
+#boot .hint{position:absolute;bottom:28px;font-size:12px;color:var(--text-2);font-family:var(--mono)}
+
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:10px clamp(18px,4vw,48px);transition:background .3s,border-color .3s,backdrop-filter .3s;border-bottom:1px solid transparent}
+nav.scrolled{background:rgba(4,7,13,.78);backdrop-filter:blur(14px);border-color:var(--line)}
+.brand{display:flex;align-items:center;gap:11px;font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:.02em}
+.brand-orb{width:22px;height:22px;border-radius:50%;background:conic-gradient(from 0deg,var(--arc),var(--cobalt),#0a1224,var(--arc));box-shadow:0 0 10px rgba(56,225,255,.3);animation:spin 6s linear infinite;position:relative}
+.brand-orb::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--void);box-shadow:0 0 6px var(--arc)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.links{display:flex;gap:6px}
+.links a{padding:6px 12px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--text-1);transition:color .2s,background .2s}
+.links a:hover{color:var(--ice);background:rgba(56,225,255,.08)}
+.menu-btn{display:none;background:none;border:1px solid var(--line);color:var(--ice);width:42px;height:42px;border-radius:10px;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--display);font-weight:600;font-size:14px;padding:10px 20px;border-radius:8px;border:1px solid transparent;cursor:pointer;transition:transform .2s,box-shadow .2s,background .2s,border-color .2s;letter-spacing:.02em}
+.btn-primary{background:var(--arc);color:#021018}
+.btn-primary:hover{background:#7aeaff}
+.btn-ghost{border-color:var(--line);color:var(--ice);background:rgba(15,27,54,.5)}
+.btn-ghost:hover{border-color:var(--arc);background:rgba(56,225,255,.08)}
+
+/* hero */
+.hero{min-height:min(100vh,760px);display:grid;grid-template-columns:1.02fr .98fr;align-items:center;gap:clamp(10px,3vw,32px);padding:96px clamp(18px,4vw,56px) 48px;max-width:1160px;margin:0 auto}
+.hero h1{font-family:var(--display);font-weight:700;font-size:clamp(2.1rem,4.4vw,3.6rem);line-height:1.08;letter-spacing:-.01em}
+.hero h1 span{display:block}
+.hero h1 .l2{color:#7fd6ff}
+.hero h1 .l2.typing::after{-webkit-text-fill-color:initial}
+.hero .sub{margin-top:18px;max-width:52ch;font-size:.98rem;color:var(--text-1)}
+.rotator{margin-top:16px;font-family:var(--mono);font-size:13px;color:var(--text-1);min-height:24px;display:flex;gap:8px;flex-wrap:wrap}
+.rotator b{color:var(--amber);font-weight:500}
+.hero-ctas{margin-top:24px;display:flex;gap:14px;flex-wrap:wrap;opacity:0;transform:translateY(10px);transition:opacity .8s,transform .8s}
+.hero-ctas.show{opacity:1;transform:none}
+.orb-wrap{position:relative;width:min(440px,88vw);aspect-ratio:1;justify-self:center;perspective:1100px}
+.orb-3d{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .15s ease-out}
+#orb{position:absolute;inset:0;width:100%;height:100%}
+.chip{position:absolute;font-family:var(--mono);font-size:11px;padding:7px 11px;border-radius:8px;background:rgba(8,16,36,.78);border:1px solid var(--line);backdrop-filter:blur(8px);color:var(--text-1);line-height:1.45;opacity:0;transition:opacity .9s;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.chip.show{opacity:1;animation:float 6s ease-in-out infinite}
+.chip b{display:block;color:var(--ice);font-weight:500;font-size:12px}
+.chip i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#5dffb0;margin-right:7px}
+.chip.c1{top:9%;left:0;transform:translateZ(70px)}
+.chip.c2{top:20%;right:-2%;transform:translateZ(110px);animation-delay:-2s}
+.chip.c3{bottom:16%;left:2%;transform:translateZ(90px);animation-delay:-4s}
+.chip.c4{bottom:6%;right:6%;transform:translateZ(60px);animation-delay:-1s}
+@keyframes float{50%{translate:0 -9px}}
+
+/* ticker */
+.ticker{border-block:1px solid var(--line);background:rgba(10,18,36,.55);overflow:hidden;white-space:nowrap;padding:11px 0}
+.ticker-track{display:inline-flex;gap:0;animation:tick 40s linear infinite}
+.ticker span{font-family:var(--display);font-weight:500;font-size:14px;color:var(--text-1);padding:0 26px;display:inline-flex;align-items:center;gap:26px}
+.ticker span::after{content:"";width:7px;height:7px;background:var(--arc);transform:rotate(45deg);opacity:.7}
+@keyframes tick{to{transform:translateX(-50%)}}
+
+/* sections */
+.section{padding:clamp(44px,6vw,80px) clamp(18px,4vw,56px);max-width:1160px;margin:0 auto}
+.section-head{max-width:680px;margin-bottom:32px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--body);font-weight:600;font-size:13px;color:var(--arc);margin-bottom:10px}
+.eyebrow::before{content:"";width:18px;height:2px;background:var(--arc)}
+.section h2{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,2.8vw,2.3rem);line-height:1.15}
+.section-head p{margin-top:12px;color:var(--text-1);font-size:.96rem;max-width:60ch}
+
+/* about */
+.about-grid{display:grid;grid-template-columns:1fr 1.05fr;gap:clamp(24px,4vw,52px);align-items:center}
+.stats{display:flex;gap:clamp(18px,3vw,36px);margin-top:24px;flex-wrap:wrap}
+.stat b{display:block;font-family:var(--display);font-size:clamp(1.5rem,2.6vw,2rem);color:var(--ice);line-height:1}
+.stat span{font-size:13px;color:var(--text-2)}
+.device{position:relative;perspective:1200px;max-width:460px;justify-self:end;width:100%}
+.device svg{width:100%;height:auto;display:block;transform:rotateY(-10deg) rotateX(4deg);transition:transform .4s;filter:drop-shadow(0 18px 30px rgba(0,0,0,.4))}
+.device:hover svg{transform:rotateY(-2deg) rotateX(0)}
+.scan{animation:scan 3.6s linear infinite}
+@keyframes scan{from{transform:translateY(-50px)}to{transform:translateY(230px)}}
+.tag{position:absolute;font-family:var(--mono);font-size:11px;padding:5px 10px;border-radius:8px;background:rgba(8,16,36,.85);border:1px solid var(--line);color:var(--arc)}
+.tag.t1{top:4%;right:2%}.tag.t2{bottom:6%;left:0;color:var(--amber)}
+
+/* bento */
+.bento{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+.card{position:relative;overflow:hidden;border-radius:14px;padding:22px;background:rgba(11,20,40,.8);border:1px solid var(--line);transform-style:preserve-3d;transition:transform .2s ease-out,border-color .3s;will-change:transform}
+.card:hover{border-color:rgba(56,225,255,.5)}
+.glare{display:none}
+.card:hover .glare{opacity:1}
+.card h3{font-family:var(--display);font-size:1.12rem;font-weight:600;margin:12px 0 6px}
+.card p{color:var(--text-1);font-size:.9rem}
+.f-icon{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:var(--arc);background:rgba(56,225,255,.08);border:1px solid rgba(56,225,255,.22)}.f-icon svg{width:18px;height:18px}
+.s4{grid-column:span 4}.s3{grid-column:span 3}.s2{grid-column:span 2}
+.split{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;align-items:center}.split .art{max-width:210px;justify-self:center}
+.card .art{width:100%;height:auto;display:block}
+.bars{display:flex;gap:4px;align-items:center;height:34px;margin-top:12px}
+.bars i{flex:1;border-radius:3px;background:linear-gradient(var(--arc),var(--cobalt));height:100%;transform-origin:center;animation:bar 1.1s ease-in-out infinite}
+@keyframes bar{0%,100%{transform:scaleY(.15)}50%{transform:scaleY(1)}}
+.ctrl{margin-top:12px;display:grid;gap:8px;font-family:var(--mono);font-size:11.5px;color:var(--text-1)}
+.ctrl div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 10px;border-radius:9px;background:rgba(4,7,13,.55);border:1px solid var(--line)}
+.slider{flex:1;max-width:120px;height:4px;background:rgba(111,134,168,.3);border-radius:2px;position:relative}
+.slider::after{content:"";position:absolute;top:50%;left:var(--v,40%);width:12px;height:12px;border-radius:50%;background:var(--arc);box-shadow:0 0 10px var(--arc);transform:translate(-50%,-50%);animation:slide 5s ease-in-out infinite}
+@keyframes slide{50%{left:72%}}
+.pill{padding:3px 10px;border-radius:99px;border:1px solid var(--line);color:var(--ice)}
+.pill.danger{color:var(--amber);border-color:rgba(255,180,84,.4)}
+
+/* demo */
+.demo{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}
+.term{border-radius:14px;border:1px solid var(--line);background:rgba(5,10,22,.85);overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.4)}
+.term-bar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);background:rgba(15,27,54,.6);font-family:var(--mono);font-size:12px;color:var(--text-2)}
+.term-bar i{width:10px;height:10px;border-radius:50%;background:#2a3d6b}
+.term-bar span{margin-left:auto}
+#chatBody{padding:18px;min-height:310px;display:flex;flex-direction:column;gap:11px}
+.msg{max-width:84%;padding:9px 13px;border-radius:12px;font-size:.88rem;line-height:1.5}
+.msg.u{align-self:flex-end;background:linear-gradient(135deg,rgba(47,107,255,.35),rgba(47,107,255,.18));border:1px solid rgba(47,107,255,.5)}
+.msg.d{align-self:flex-start;background:rgba(56,225,255,.06);border:1px solid rgba(56,225,255,.22)}
+.msg small{display:block;font-family:var(--mono);font-size:11px;color:var(--arc);margin-bottom:4px}
+.approve{margin-top:10px;font-family:var(--mono);font-size:12px;padding:7px 14px;border-radius:8px;border:1px solid var(--amber);color:var(--amber);background:rgba(255,180,84,.08);transition:all .3s}
+.approve.on{background:var(--amber);color:#1a1000}
+.side{display:grid;gap:16px}
+.panel{border-radius:14px;border:1px solid var(--line);background:rgba(11,20,40,.8);padding:18px}
+.panel h4{font-family:var(--display);font-weight:600;font-size:1rem;margin-bottom:10px}
+.mem-item,.doc-item{font-family:var(--mono);font-size:12px;padding:8px 11px;border-radius:9px;background:rgba(4,7,13,.6);border:1px solid var(--line);color:var(--text-1);margin-bottom:8px;animation:pop .5s}
+.mem-item{border-color:rgba(255,180,84,.35);color:var(--ice)}
+.empty{font-size:13px;color:var(--text-2)}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.97)}}
+
+/* how */
+.pipe{width:100%;height:auto;display:block;margin:0 auto 22px;max-width:820px}
+.flow{stroke-dasharray:6 8;animation:flow 1.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-14}}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.step-num{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:14px;color:#021018;background:var(--arc)}
+.step h4{margin:12px 0 6px;font-family:var(--display);font-size:1.05rem;font-weight:600}
+
+/* creator */
+.creator{display:flex;align-items:center;gap:20px;padding:24px;flex-wrap:wrap}
+.creator-avatar{width:68px;height:68px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:22px;color:var(--ice);background:radial-gradient(circle at 30% 25%,#1d3a7a,#0a1224);border:2px solid var(--arc);flex:none;position:relative}
+.creator-avatar::after{content:"";position:absolute;inset:-10px;border-radius:50%;border:1px dashed rgba(56,225,255,.5);animation:spin 14s linear infinite}
+.creator h3{margin:0}
+
+/* cta */
+.cta{text-align:center;padding:clamp(44px,6vw,76px) 20px}
+.cta h2{font-family:var(--display);font-size:clamp(1.6rem,3vw,2.3rem);font-weight:700;max-width:18ch;margin:0 auto 12px}
+.cta p{color:var(--text-1);font-size:.95rem;max-width:52ch;margin:0 auto 22px}
+
+/* footer */
+.footer{border-top:1px solid var(--line);padding:18px clamp(18px,4vw,56px);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;color:var(--text-2);font-size:13px;background:rgba(4,7,13,.8)}
+.footer a{color:var(--text-1);margin-left:18px}
+.footer a:hover{color:var(--arc)}
+
+@media(max-width:960px){
+  .hero{grid-template-columns:1fr;padding-top:84px;text-align:left}
+  .orb-wrap{order:-1;width:min(320px,78vw)}.device{justify-self:center}
+  .about-grid,.demo,.split{grid-template-columns:1fr}
+  .bento .s4,.bento .s3,.bento .s2{grid-column:span 6}
+  .steps{grid-template-columns:1fr}
+  .links{position:absolute;top:100%;left:0;right:0;flex-direction:column;background:rgba(4,7,13,.96);border-bottom:1px solid var(--line);padding:10px 18px 18px;display:none}
+  .links.open{display:flex}
+  .menu-btn{display:grid;place-items:center}
+  nav>.btn{display:none}
+  .chip.c2,.chip.c4{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<div id="boot" aria-hidden="true"><pre id="bootText"></pre><div class="hint">Click to skip</div></div>
+<div id="progress"></div>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<nav id="nav">
+  <a href="#top" class="brand"><div class="brand-orb"></div>Deva AI</a>
+  <div class="links" id="links">
+    <a href="#about">About</a>
+    <a href="#features">Features</a>
+    <a href="#demo">Live demo</a>
+    <a href="#how">How It Works</a>
+    <a href="#creator">Developer</a>
+  </div>
+  <a href="/chat" class="btn btn-primary">Start Deva AI</a>
+  <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+</nav>
+
+<main id="top">
+<header class="hero">
+  <div>
+    <h1 aria-label="Intelligence That Stays With You.">
+      <span class="l1" data-hero>Intelligence That</span>
+      <span class="l2" data-hero>Stays With You.</span>
+    </h1>
+    <p class="sub" data-hero>Deva AI is a personal, local-first AI assistant that runs entirely on your own machine through Ollama, private by default, with memory, a knowledge library, and optional online research when you need it.</p>
+    <div class="rotator"><span>Deva is your</span><b id="rot"></b></div>
+    <div class="hero-ctas" id="heroCtas">
+      <a href="/chat" class="btn btn-primary">Launch Deva AI</a>
+      <a href="#features" class="btn btn-ghost">Explore Features</a>
+    </div>
+  </div>
+
+  <div class="orb-wrap" id="orbWrap">
+    <div class="orb-3d" id="orb3d">
+      <canvas id="orb" aria-label="Rotating 3D holographic core of Deva AI" role="img"></canvas>
+      <div class="chip c1"><i></i><b>Ollama online</b>qwen3:1.7b loaded</div>
+      <div class="chip c2"><b>Data sent: 0 B</b>ordinary chat stays local</div>
+      <div class="chip c3"><b>Memory: ask first</b>saved only when approved</div>
+      <div class="chip c4"><b>Research: on request</b>cited sources</div>
+    </div>
+  </div>
+</header>
+
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
+<section class="section" id="about">
+  <div class="about-grid">
+    <div class="section-head" style="margin-bottom:0">
+      <div class="eyebrow" data-type>Local-first and private</div>
+      <h2 data-type>Your AI. Your machine. Your data.</h2>
+      <p data-type>Deva AI's core chat runs on Ollama, on your own hardware. There's no required cloud subscription and no mandatory data upload. Deva only reaches the internet when you explicitly ask it to research something.</p>
+      <div class="stats">
+        <div class="stat"><b data-count="0">0</b><span>bytes uploaded in ordinary chat</span></div>
+        <div class="stat"><b><span data-count="6" style="font-size:inherit;color:inherit">0</span></b><span>built-in capabilities</span></div>
+        <div class="stat"><b><span data-count="100" style="font-size:inherit;color:inherit">0</span>%</b><span>offline once your model is pulled</span></div>
+      </div>
+    </div>
+
+    <div class="device tilt3d">
+      <svg viewBox="0 0 520 340" role="img" aria-label="Laptop running Deva AI with a privacy shield on the screen">
+        <defs>
+          <linearGradient id="scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14264d"/><stop offset="1" stop-color="#070d1d"/></linearGradient>
+          <linearGradient id="base" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a2d5a"/><stop offset="1" stop-color="#0b1530"/></linearGradient>
+          <linearGradient id="scanG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38e1ff" stop-opacity="0"/><stop offset="1" stop-color="#38e1ff" stop-opacity=".28"/></linearGradient>
+          <radialGradient id="shieldG" cx="50%" cy="40%" r="65%"><stop offset="0" stop-color="#38e1ff" stop-opacity=".35"/><stop offset="1" stop-color="#2f6bff" stop-opacity=".05"/></radialGradient>
+          <clipPath id="clipScr"><rect x="86" y="30" width="348" height="218" rx="8"/></clipPath>
+        </defs>
+        <ellipse cx="260" cy="322" rx="220" ry="11" fill="#38e1ff" opacity=".13"/>
+        <rect x="70" y="14" width="380" height="248" rx="14" fill="#0b1530" stroke="#2a3d6b" stroke-width="1.5"/>
+        <rect x="86" y="30" width="348" height="218" rx="8" fill="url(#scr)"/>
+        <g clip-path="url(#clipScr)">
+          <rect x="86" y="30" width="348" height="22" fill="#0d1a38"/>
+          <circle cx="100" cy="41" r="3" fill="#2a3d6b"/><circle cx="111" cy="41" r="3" fill="#2a3d6b"/><circle cx="122" cy="41" r="3" fill="#2a3d6b"/>
+          <rect x="86" y="52" width="70" height="196" fill="#0a1430"/>
+          <rect x="96" y="66" width="50" height="6" rx="3" fill="#38e1ff" opacity=".7"/>
+          <rect x="96" y="82" width="42" height="5" rx="2.5" fill="#2a3d6b"/>
+          <rect x="96" y="96" width="46" height="5" rx="2.5" fill="#2a3d6b"/>
+          <rect x="96" y="110" width="36" height="5" rx="2.5" fill="#2a3d6b"/>
+          <rect x="172" y="68" width="150" height="26" rx="8" fill="#1b3a8a" opacity=".7"/>
+          <rect x="300" y="104" width="120" height="26" rx="8" fill="#38e1ff" opacity=".14" stroke="#38e1ff" stroke-opacity=".4"/>
+          <path d="M260 138 L318 160 V198 C318 222 292 238 260 246 C228 238 202 222 202 198 V160 Z" transform="translate(0,-12) scale(1,.9) translate(0,22)" fill="url(#shieldG)" stroke="#38e1ff" stroke-width="2"/>
+          <rect x="248" y="186" width="24" height="19" rx="3" fill="#38e1ff"/>
+          <path d="M252 186v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#38e1ff" stroke-width="3"/>
+          <rect class="scan" x="86" y="30" width="348" height="46" fill="url(#scanG)"/>
+        </g>
+        <path d="M40 268h440l-30 38H70z" fill="url(#base)" stroke="#2a3d6b" stroke-width="1.5"/>
+        <rect x="212" y="274" width="96" height="7" rx="3.5" fill="#070d1d"/>
+        <g stroke="#2a3d6b" stroke-width="1"><path d="M80 288h360M100 298h320"/></g>
+      </svg>
+      <div class="tag t1">runs on Ollama</div>
+      <div class="tag t2">HP EliteBook 860 G6</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="section-head">
+    <div class="eyebrow" data-type>Capabilities</div>
+    <h2 data-type>Built for real, everyday use</h2>
+  </div>
+
+  <div class="bento">
+    <!-- Offline Conversations -->
+    <article class="card s4 tilt">
+      <div class="glare"></div>
+      <div class="split">
+        <div>
+          <div class="f-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" opacity=".4"/></svg></div>
+          <h3 data-type>Offline Conversations</h3>
+          <p data-type>Chat with Deva without an internet connection, once your local model is pulled through Ollama.</p>
+        </div>
+        <svg class="art" viewBox="0 0 240 170" role="img" aria-label="Processor chip with a crossed-out wifi symbol">
+          <defs><linearGradient id="chipG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1f3d86"/><stop offset="1" stop-color="#0b1530"/></linearGradient></defs>
+          <g stroke="#38e1ff" stroke-opacity=".55" stroke-width="2"><path d="M80 40v-18M100 40v-18M120 40v-18M140 40v-18M160 40v-18M80 130v18M100 130v18M120 130v18M140 130v18M160 130v18M64 60H44M64 80H44M64 100H44M64 120H44M176 60h20M176 80h20M176 100h20M176 120h20"/></g>
+          <rect x="64" y="40" width="112" height="90" rx="12" fill="url(#chipG)" stroke="#38e1ff" stroke-width="1.5"/>
+          <g fill="none" stroke="#38e1ff" stroke-width="3" stroke-linecap="round"><path d="M96 78a34 34 0 0 1 48 0"/><path d="M106 90a20 20 0 0 1 28 0"/></g>
+          <circle cx="120" cy="102" r="3.5" fill="#38e1ff"/>
+          <path d="M92 118L148 62" stroke="#ffb454" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="120" cy="85" r="52" fill="none" stroke="#38e1ff" stroke-opacity=".25"><animate attributeName="r" values="48;60;48" dur="3.2s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values=".35;0;.35" dur="3.2s" repeatCount="indefinite"/></circle>
+        </svg>
+      </div>
+    </article>
+
+    <!-- Personal Memory -->
+    <article class="card s2 tilt">
+      <div class="glare"></div>
+      <div class="f-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A5.5 5.5 0 0 0 4 7.5c0 1.5.5 2.5 1.5 3.5L12 17l6.5-6c1-1 1.5-2 1.5-3.5A5.5 5.5 0 0 0 14.5 2c-1.7 0-3 .7-4 2a5.4 5.4 0 0 0-1-2z"/></svg></div>
+      <h3 data-type>Personal Memory</h3>
+      <p data-type>Tell Deva to remember specific facts, review and edit them anytime, or ask it to forget something.</p>
+      <svg class="art" viewBox="0 0 220 90" style="margin-top:12px" role="img" aria-label="Network of memory nodes">
+        <g stroke="#2f6bff" stroke-opacity=".6" stroke-width="1.3"><path d="M20 60L60 25L110 55L160 20L200 50M60 25L90 78L110 55L140 80L160 20"/></g>
+        <g fill="#38e1ff"><circle cx="20" cy="60" r="4"/><circle cx="60" cy="25" r="5"/><circle cx="110" cy="55" r="6"><animate attributeName="r" values="5;8;5" dur="2.4s" repeatCount="indefinite"/></circle><circle cx="160" cy="20" r="4"/><circle cx="200" cy="50" r="4"/><circle cx="90" cy="78" r="3.5"/><circle cx="140" cy="80" r="3.5"/></g>
+        <circle cx="110" cy="55" r="12" fill="none" stroke="#ffb454" stroke-opacity=".8"/>
+      </svg>
+    </article>
+
+    <!-- Online Research -->
+    <article class="card s2 tilt">
+      <div class="glare"></div>
+      <div class="f-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <h3 data-type>Online Research</h3>
+      <p data-type>When you're connected, ask Deva to research a topic. It searches, reads, summarizes, and cites sources.</p>
+      <svg class="art" viewBox="0 0 220 90" style="margin-top:12px" role="img" aria-label="Globe with search beam">
+        <circle cx="60" cy="45" r="34" fill="none" stroke="#38e1ff" stroke-width="1.5"/>
+        <ellipse cx="60" cy="45" rx="14" ry="34" fill="none" stroke="#38e1ff" stroke-opacity=".6"/>
+        <path d="M26 45h68M32 28h56M32 62h56" stroke="#38e1ff" stroke-opacity=".4"/>
+        <path d="M94 45h30" stroke="#ffb454" stroke-width="2" stroke-dasharray="4 4" class="flow"/>
+        <g fill="#0f1b36" stroke="#2f6bff"><rect x="128" y="14" width="76" height="16" rx="5"/><rect x="128" y="37" width="76" height="16" rx="5"/><rect x="128" y="60" width="76" height="16" rx="5"/></g>
+        <g fill="#38e1ff" opacity=".7"><rect x="136" y="20" width="40" height="4" rx="2"/><rect x="136" y="43" width="52" height="4" rx="2"/><rect x="136" y="66" width="32" height="4" rx="2"/></g>
+      </svg>
+    </article>
+
+    <!-- Knowledge Library -->
+    <article class="card s4 tilt">
+      <div class="glare"></div>
+      <div class="split">
+        <div>
+          <div class="f-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+          <h3 data-type>Knowledge Library</h3>
+          <p data-type>Upload PDFs, notes, and docs. Deva retrieves relevant excerpts instead of loading everything into every prompt.</p>
+        </div>
+        <svg class="art" viewBox="0 0 240 170" role="img" aria-label="Stack of documents with a magnifier highlighting one excerpt">
+          <g stroke="#2f6bff" stroke-width="1.5">
+            <rect x="52" y="24" width="110" height="126" rx="8" fill="#0b1530" transform="rotate(-8 107 87)"/>
+            <rect x="62" y="20" width="110" height="126" rx="8" fill="#0f1b36" transform="rotate(-2 117 83)"/>
+            <rect x="74" y="16" width="110" height="126" rx="8" fill="#142348" stroke="#38e1ff"/>
+          </g>
+          <g fill="#2a3d6b"><rect x="88" y="34" width="60" height="6" rx="3"/><rect x="88" y="50" width="82" height="5" rx="2.5"/><rect x="88" y="62" width="76" height="5" rx="2.5"/><rect x="88" y="98" width="82" height="5" rx="2.5"/><rect x="88" y="110" width="58" height="5" rx="2.5"/></g>
+          <rect x="84" y="76" width="92" height="14" rx="4" fill="#38e1ff" fill-opacity=".28" stroke="#38e1ff"><animate attributeName="fill-opacity" values=".15;.4;.15" dur="2.6s" repeatCount="indefinite"/></rect>
+          <circle cx="176" cy="104" r="22" fill="#04070d" fill-opacity=".55" stroke="#ffb454" stroke-width="3"/>
+          <path d="M192 120l20 20" stroke="#ffb454" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </article>
+
+    <!-- JARVIS-style Assistant -->
+    <article class="card s3 tilt">
+      <div class="glare"></div>
+      <div class="f-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg></div>
+      <h3 data-type>JARVIS-Style Assistant</h3>
+      <p data-type>A dedicated voice-and-text assistant page with an animated status orb and browser speech support.</p>
+      <div class="bars" aria-hidden="true" id="bars"></div>
+    </article>
+
+    <!-- Full Owner Control -->
+    <article class="card s3 tilt">
+      <div class="glare"></div>
+      <div class="f-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M4 12a8 8 0 0 1 16 0"/></svg></div>
+      <h3 data-type>Full Owner Control</h3>
+      <p data-type>Configure the model, temperature, appearance and privacy settings, and export or wipe your data anytime.</p>
+      <div class="ctrl" aria-hidden="true">
+        <div>Model <span class="pill">qwen3:1.7b</span></div>
+        <div>Temperature <span class="slider"></span></div>
+        <div>Your data <span><span class="pill">Export</span> <span class="pill danger">Wipe</span></span></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="demo">
+  <div class="section-head">
+    <div class="eyebrow" data-type>See it work</div>
+    <h2 data-type>A conversation, as it happens</h2>
+    <p data-type>Deva keeps ordinary chat on your machine. Memories wait for your approval, and research only runs when you ask for it.</p>
+  </div>
+  <div class="demo">
+    <div class="term tilt3d">
+      <div class="term-bar"><i></i><i></i><i></i><span>deva://chat · local</span></div>
+      <div id="chatBody" aria-live="polite"></div>
+    </div>
+    <div class="side">
+      <div class="panel"><h4>Memory</h4><div id="memList"><div class="empty">Nothing saved yet. Deva asks before it remembers.</div></div></div>
+      <div class="panel"><h4>Knowledge library</h4>
+        <div class="doc-item">lecture-notes.pdf</div>
+        <div class="doc-item">project-brief.docx</div>
+        <div class="doc-item">network-cheatsheet.md</div>
+        <div class="empty" id="excerpts">Relevant excerpts are retrieved per question.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="section-head">
+    <div class="eyebrow" data-type>How It Works</div>
+    <h2 data-type>Three moving parts, one experience</h2>
+  </div>
+
+  <svg class="pipe" viewBox="0 0 900 150" role="img" aria-label="Pipeline: your message and context flow into Ollama, which replies on your machine">
+    <defs>
+      <linearGradient id="nodeG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1f3d86"/><stop offset="1" stop-color="#0b1530"/></linearGradient>
+    </defs>
+    <path d="M170 75H370M530 75H730" stroke="#38e1ff" stroke-width="2" fill="none" class="flow"/>
+    <g stroke="#38e1ff" stroke-width="1.5" fill="url(#nodeG)">
+      <rect x="40" y="30" width="130" height="90" rx="16"/>
+      <rect x="370" y="30" width="160" height="90" rx="16"/>
+      <rect x="730" y="30" width="130" height="90" rx="16"/>
+    </g>
+    <g font-family="Chakra Petch,Segoe UI,sans-serif" font-size="17" fill="#e6f4ff" text-anchor="middle">
+      <text x="105" y="70">Your</text><text x="105" y="92">message</text>
+      <text x="450" y="70">Memory + library</text><text x="450" y="92" fill="#ffb454">context, local</text>
+      <text x="795" y="70">Ollama</text><text x="795" y="92" fill="#38e1ff">qwen3:1.7b</text>
+    </g>
+    <circle r="5" fill="#ffb454"><animateMotion dur="3s" repeatCount="indefinite" path="M170 75H370 M530 75H730"/></circle>
+  </svg>
+
+  <div class="steps">
+    <article class="card step tilt">
+      <div class="glare"></div>
+      <div class="step-num">1</div>
+      <h4 data-type>Ollama runs the model</h4>
+      <p data-type>Your existing local model (qwen3:1.7b) handles every response. No data leaves your machine for ordinary chat.</p>
+    </article>
+    <article class="card step tilt">
+      <div class="glare"></div>
+      <div class="step-num">2</div>
+      <h4 data-type>Deva adds context</h4>
+      <p data-type>Relevant memories and knowledge excerpts are retrieved locally and added to the prompt before Ollama replies.</p>
+    </article>
+    <article class="card step tilt">
+      <div class="glare"></div>
+      <div class="step-num">3</div>
+      <h4 data-type>You stay in control</h4>
+      <p data-type>Research only runs when you ask, memories only save when you approve, and everything is exportable or erasable.</p>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="creator">
+  <div class="card creator tilt">
+    <div class="glare"></div>
+    <div class="creator-avatar">HC</div>
+    <div style="flex:1;min-width:240px">
+      <h3 data-type>Created by Hirwa Christian</h3>
+      <p style="margin-top:8px" data-type>Built as a personal, local-first AI assistant: a coding companion, learning partner, and productivity tool running on an HP EliteBook 860 G6 with Ollama.</p>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <h2 data-type>Ready when you are.</h2>
+  <p data-type>Open the chat, pull your model, and start working with an assistant that stays on your machine.</p>
+  <a href="/chat" class="btn btn-primary">Launch Deva AI</a>
+</section>
+</main>
+
+<footer class="footer">
+  <span>Deva AI · v1.0.0</span>
+  <div>
+    <a href="/chat">Chat</a>
+    <a href="/assistant">Assistant</a>
+    <a href="/settings">Settings</a>
+  </div>
+</footer>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- typewriter ---------- */
+async function type(el, text, speed) {
+  if (reduce) { el.textContent = text; return; }
+  speed = speed || (text.length > 110 ? 9 : 22);
+  el.classList.add('typing');
+  el.textContent = '';
+  for (let i = 0; i < text.length; i++) {
+    el.textContent += text[i];
+    await sleep(speed * (0.6 + Math.random() * 0.8));
+  }
+  el.classList.remove('typing');
+}
+
+/* ---------- ticker ---------- */
+const words = ['Offline chat', 'Ollama runtime', 'Personal memory', 'Knowledge library', 'Online research on request', 'Voice and text assistant', 'Export or wipe your data', 'Private by default'];
+const track = $('#tickerTrack');
+track.innerHTML = [...words, ...words].map(w => `<span>${w}</span>`).join('');
+
+/* ---------- bars ---------- */
+$('#bars').innerHTML = Array.from({ length: 28 }, (_, i) => `<i style="animation-delay:${(i * 0.07).toFixed(2)}s;animation-duration:${(0.8 + (i % 5) * 0.15).toFixed(2)}s"></i>`).join('');
+
+/* ---------- nav ---------- */
+const nav = $('#nav'), prog = $('#progress');
+function onScroll() {
+  nav.classList.toggle('scrolled', scrollY > 30);
+  const h = document.documentElement.scrollHeight - innerHeight;
+  prog.style.width = (h > 0 ? scrollY / h * 100 : 0) + '%';
+}
+addEventListener('scroll', onScroll, { passive: true }); onScroll();
+const menuBtn = $('#menuBtn'), links = $('#links');
+menuBtn.addEventListener('click', () => {
+  const o = links.classList.toggle('open');
+  menuBtn.setAttribute('aria-expanded', o);
+});
+links.addEventListener('click', e => { if (e.target.tagName === 'A') { links.classList.remove('open'); menuBtn.setAttribute('aria-expanded', false); } });
+
+/* ---------- card tilt (CSS 3D) ---------- */
+$$('.tilt').forEach(el => {
+  el.addEventListener('pointermove', e => {
+    if (reduce || e.pointerType === 'touch') return;
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+    el.style.transform = `perspective(900px) rotateX(${(0.5 - py) * 3}deg) rotateY(${(px - 0.5) * 4}deg) translateZ(0)`;
+    el.style.setProperty('--mx', px * 100 + '%');
+    el.style.setProperty('--my', py * 100 + '%');
+  });
+  el.addEventListener('pointerleave', () => { el.style.transform = ''; });
+});
+
+/* ---------- hero parallax (CSS 3D) ---------- */
+const orb3d = $('#orb3d');
+addEventListener('pointermove', e => {
+  if (reduce) return;
+  const x = e.clientX / innerWidth - 0.5, y = e.clientY / innerHeight - 0.5;
+  orb3d.style.transform = `rotateX(${-y * 12}deg) rotateY(${x * 16}deg)`;
+});
+
+/* ---------- counters ---------- */
+function count(el) {
+  const to = +el.dataset.count;
+  if (reduce || to === 0) { el.textContent = to; return; }
+  const t0 = performance.now(), d = 1600;
+  (function step(now) {
+    const k = Math.min((now - t0) / d, 1);
+    el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
+/* ---------- background constellation ---------- */
+(() => {
+  const c = $('#bg'), x = c.getContext('2d');
+  let W, H, pts = [];
+  function size() {
+    const d = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    c.width = W * d; c.height = H * d; x.setTransform(d, 0, 0, d, 0, 0);
+    const n = Math.round(Math.min(90, W * H / 18000));
+    pts = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25, r: Math.random() * 1.4 + .4 }));
+  }
+  size(); addEventListener('resize', size);
+  function frame() {
+    x.clearRect(0, 0, W, H);
+    for (const p of pts) {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+      x.fillStyle = 'rgba(56,225,255,.55)';
+      x.beginPath(); x.arc(p.x, p.y, p.r, 0, 6.2832); x.fill();
+    }
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, d2 = dx * dx + dy * dy;
+      if (d2 < 14400) { x.strokeStyle = `rgba(47,107,255,${(1 - d2 / 14400) * .22})`; x.lineWidth = 1; x.beginPath(); x.moveTo(pts[i].x, pts[i].y); x.lineTo(pts[j].x, pts[j].y); x.stroke(); }
+    }
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+/* ---------- 3D holographic core (canvas) ---------- */
+(() => {
+  const c = $('#orb'), x = c.getContext('2d');
+  let W, H;
+  function size() {
+    const r = c.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    c.width = W * d; c.height = H * d; x.setTransform(d, 0, 0, d, 0, 0);
+  }
+  size(); addEventListener('resize', size);
+
+  const N = 280, P = [];
+  for (let i = 0; i < N; i++) {
+    const y = 1 - 2 * i / (N - 1), r = Math.sqrt(1 - y * y), t = i * 2.399963;
+    P.push([Math.cos(t) * r, y, Math.sin(t) * r]);
+  }
+  const E = [], seen = new Set();
+  for (let i = 0; i < N; i++) {
+    const d = [];
+    for (let j = 0; j < N; j++) if (j !== i) {
+      const dx = P[i][0] - P[j][0], dy = P[i][1] - P[j][1], dz = P[i][2] - P[j][2];
+      d.push([dx * dx + dy * dy + dz * dz, j]);
+    }
+    d.sort((a, b) => a[0] - b[0]);
+    for (let k = 0; k < 3; k++) {
+      const j = d[k][1], key = i < j ? i * N + j : j * N + i;
+      if (!seen.has(key)) { seen.add(key); E.push([i, j]); }
+    }
+  }
+  const rings = [
+    { r: 1.4,  tilt: [1.15, 0, .3],  sp: .55,  col: '56,225,255', gap: true },
+    { r: 1.65, tilt: [.35, 0, -.95], sp: -.38, col: '47,107,255', gap: false },
+    { r: 1.9,  tilt: [-.95, 0, .5],  sp: .24,  col: '56,225,255', gap: true }
+  ];
+
+  function rot(v, ax, ay, az) {
+    let X = v[0], Y = v[1], Z = v[2], c, s;
+    c = Math.cos(ay); s = Math.sin(ay); const x1 = X * c + Z * s, z1 = -X * s + Z * c;
+    c = Math.cos(ax); s = Math.sin(ax); const y1 = Y * c - z1 * s, z2 = Y * s + z1 * c;
+    c = Math.cos(az); s = Math.sin(az);
+    return [x1 * c - y1 * s, x1 * s + y1 * c, z2];
+  }
+  const pr = (v, R) => { const s = 1 / (1 - v[2] * .1); return [W / 2 + v[0] * R * s, H / 2 + v[1] * R * s, v[2]]; };
+
+  let mx = 0, my = 0, tx = 0, ty = 0, running = true, started = false;
+  addEventListener('pointermove', e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; });
+
+  function hud(t, R) {
+    x.save(); x.translate(W / 2, H / 2);
+    x.rotate(t * .08);
+    for (let i = 0; i < 120; i++) {
+      const a = i / 120 * 6.2832, major = i % 10 === 0, l = major ? 11 : 4;
+      x.strokeStyle = `rgba(56,225,255,${major ? .6 : .22})`; x.lineWidth = 1;
+      x.beginPath(); x.moveTo(Math.cos(a) * R * 2.62, Math.sin(a) * R * 2.62);
+      x.lineTo(Math.cos(a) * (R * 2.62 - l), Math.sin(a) * (R * 2.62 - l)); x.stroke();
+    }
+    x.rotate(-t * .08 * 2.4);
+    x.lineWidth = 2.2; x.lineCap = 'round';
+    x.strokeStyle = 'rgba(255,180,84,.75)'; x.beginPath(); x.arc(0, 0, R * 2.46, .3, 1.15); x.stroke();
+    x.strokeStyle = 'rgba(56,225,255,.7)';  x.beginPath(); x.arc(0, 0, R * 2.46, 3.3, 4.4); x.stroke();
+    x.strokeStyle = 'rgba(47,107,255,.6)';  x.beginPath(); x.arc(0, 0, R * 2.46, 5.2, 5.75); x.stroke();
+    x.lineWidth = 1; x.strokeStyle = 'rgba(56,225,255,.1)'; x.beginPath(); x.arc(0, 0, R * 2.3, 0, 6.2832); x.stroke();
+    x.restore();
+  }
+
+  function draw(now) {
+    const t = now / 1000;
+    tx += (mx - tx) * .04; ty += (my - ty) * .04;
+    const ay = t * .25 + tx * 1.2, ax = -.25 + ty * .8, R = W * .18;
+    x.clearRect(0, 0, W, H);
+    x.globalCompositeOperation = 'lighter';
+    hud(t, R);
+
+    const pulse = 1 + .06 * Math.sin(t * 2.2);
+    const g = x.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, R * 1.15 * pulse);
+    g.addColorStop(0, 'rgba(230,250,255,.95)');
+    g.addColorStop(.22, 'rgba(56,225,255,.55)');
+    g.addColorStop(.6, 'rgba(47,107,255,.18)');
+    g.addColorStop(1, 'rgba(47,107,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+
+    const Q = P.map(p => pr(rot(p, ax, ay, 0), R));
+    x.lineWidth = 1;
+    for (const [i, j] of E) {
+      const a = Q[i], b = Q[j], k = ((a[2] + b[2]) / 2 + 1) / 2;
+      x.strokeStyle = `rgba(56,225,255,${.05 + .3 * k})`;
+      x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(b[0], b[1]); x.stroke();
+    }
+    for (const q of Q) {
+      const k = (q[2] + 1) / 2;
+      x.fillStyle = `rgba(190,245,255,${.2 + .7 * k})`;
+      x.beginPath(); x.arc(q[0], q[1], .7 + 1.9 * k, 0, 6.2832); x.fill();
+    }
+
+    for (const rg of rings) {
+      const SEG = 120; let prev = null;
+      for (let k = 0; k <= SEG; k++) {
+        const a = k / SEG * 6.2832 + t * rg.sp;
+        const v = rot(rot([Math.cos(a) * rg.r, 0, Math.sin(a) * rg.r], rg.tilt[0], rg.tilt[1], rg.tilt[2]), ax, ay, 0);
+        const q = pr(v, R);
+        if (prev && !(rg.gap && k % 8 > 5)) {
+          const dep = (q[2] / rg.r + 1) / 2;
+          x.strokeStyle = `rgba(${rg.col},${.14 + .6 * dep})`; x.lineWidth = 1.3;
+          x.beginPath(); x.moveTo(prev[0], prev[1]); x.lineTo(q[0], q[1]); x.stroke();
+        }
+        prev = q;
+      }
+      const sa = t * rg.sp * 2.2;
+      const sv = rot(rot([Math.cos(sa) * rg.r, 0, Math.sin(sa) * rg.r], rg.tilt[0], rg.tilt[1], rg.tilt[2]), ax, ay, 0);
+      const sq = pr(sv, R), sk = (sq[2] / rg.r + 1) / 2;
+      const sg = x.createRadialGradient(sq[0], sq[1], 0, sq[0], sq[1], 14);
+      sg.addColorStop(0, 'rgba(255,200,120,' + (.5 + .5 * sk) + ')'); sg.addColorStop(1, 'rgba(255,180,84,0)');
+      x.fillStyle = sg; x.beginPath(); x.arc(sq[0], sq[1], 14, 0, 6.2832); x.fill();
+    }
+    x.globalCompositeOperation = 'source-over';
+    if (!reduce && running) requestAnimationFrame(draw);
+    else if (!running) started = false;
+  }
+  function start() { if (!started) { started = true; requestAnimationFrame(draw); } }
+  start();
+  new IntersectionObserver(es => { running = es[0].isIntersecting; if (running) start(); }).observe(c);
+})();
+
+/* ---------- prepare typed text ---------- */
+async function prepare() {
+  await Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), sleep(1500)]);
+  $$('[data-type],[data-hero]').forEach(el => {
+    el.dataset.full = el.textContent.replace(/\s+/g, ' ').trim();
+    el.style.minHeight = el.offsetHeight + 'px';
+    el.textContent = '';
+  });
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    io.unobserve(e.target);
+    type(e.target, e.target.dataset.full);
+  }), { threshold: .35, rootMargin: '0px 0px -8% 0px' });
+  $$('[data-type]').forEach(el => io.observe(el));
+
+  const cio = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) { cio.unobserve(e.target); count(e.target); }
+  }), { threshold: .6 });
+  $$('[data-count]').forEach(el => cio.observe(el));
+}
+
+/* ---------- hero sequence ---------- */
+async function rotator() {
+  const el = $('#rot');
+  const list = ['private assistant', 'offline coding companion', 'learning partner', 'productivity tool', 'research helper'];
+  if (reduce) { el.textContent = list[0]; return; }
+  for (let i = 0; ; i = (i + 1) % list.length) {
+    el.classList.add('typing');
+    for (const ch of list[i]) { el.textContent += ch; await sleep(55); }
+    el.classList.remove('typing'); await sleep(1700); el.classList.add('typing');
+    while (el.textContent.length) { el.textContent = el.textContent.slice(0, -1); await sleep(26); }
+    await sleep(250);
+  }
+}
+async function heroSequence() {
+  const [l1, l2, sub] = $$('[data-hero]');
+  await type(l1, l1.dataset.full, 45);
+  await type(l2, l2.dataset.full, 45);
+  $$('.chip').forEach((c, i) => setTimeout(() => c.classList.add('show'), 200 + i * 250));
+  type(sub, sub.dataset.full, 12).then(() => { $('#heroCtas').classList.add('show'); rotator(); });
+  if (reduce) { $('#heroCtas').classList.add('show'); $$('.chip').forEach(c => c.classList.add('show')); }
+}
+
+/* ---------- boot ---------- */
+async function boot() {
+  const boot = $('#boot'), pre = $('#bootText');
+  let skipped = false;
+  boot.addEventListener('click', () => skipped = true);
+  const prep = prepare();
+  if (!reduce) {
+    const lines = [
+      ['DEVA CORE v1.0.0', ''],
+      ['Linking Ollama runtime', ' OK'],
+      ['Loading model qwen3:1.7b', ' OK'],
+      ['Mounting memory and library', ' OK'],
+      ['Privacy shield', ' ACTIVE']
+    ];
+    for (const [a, b] of lines) {
+      if (skipped) break;
+      pre.innerHTML += '> ';
+      for (const ch of a) { if (skipped) break; pre.innerHTML += ch; await sleep(14); }
+      pre.innerHTML += `<span class="ok">${b}</span>\n`;
+      await sleep(130);
+    }
+    if (!skipped) await sleep(350);
+  }
+  await prep;
+  boot.classList.add('hide');
+  heroSequence();
+}
+
+/* ---------- live chat demo ---------- */
+(async () => {
+  const body = $('#chatBody'), mem = $('#memList'), exc = $('#excerpts');
+  let visible = false;
+  new IntersectionObserver(es => visible = es[0].isIntersecting, { threshold: .25 }).observe(body);
+  const waitVisible = async () => { while (!visible) await sleep(400); };
+  function add(role) {
+    const m = document.createElement('div');
+    m.className = 'msg ' + role;
+    if (role === 'd') m.innerHTML = '<small>Deva</small><span></span>';
+    else m.innerHTML = '<span></span>';
+    body.appendChild(m);
+    return m;
+  }
+  await sleep(2500);
+  for (;;) {
+    await waitVisible();
+    body.innerHTML = '';
+    mem.innerHTML = '<div class="empty">Nothing saved yet. Deva asks before it remembers.</div>';
+    exc.textContent = 'Relevant excerpts are retrieved per question.';
+
+    let m = add('u'); await type($('span', m), 'Remember that my demo day is next Friday.', 26);
+    await sleep(600); await waitVisible();
+    m = add('d'); await type($('span', m), 'I can save that: demo day, next Friday. Should I keep it?', 22);
+    const btn = document.createElement('button');
+    btn.className = 'approve'; btn.textContent = 'Approve'; btn.tabIndex = -1;
+    m.appendChild(btn);
+    await sleep(1300); btn.classList.add('on'); btn.textContent = 'Approved';
+    mem.innerHTML = ''; const item = document.createElement('div');
+    item.className = 'mem-item'; item.textContent = 'Demo day: next Friday'; mem.appendChild(item);
+    await sleep(1600); await waitVisible();
+
+    m = add('u'); await type($('span', m), 'What do my notes say about local-first privacy?', 26);
+    await sleep(500);
+    m = add('d'); await type($('span', m), 'Checking your library locally...', 22);
+    await sleep(700);
+    exc.textContent = '3 excerpts retrieved from lecture-notes.pdf';
+    await type($('span', m), 'Your notes say a local model keeps prompts and files on your own device. I used 3 excerpts from lecture-notes.pdf.', 14);
+    await sleep(1800); await waitVisible();
+
+    m = add('u'); await type($('span', m), 'Research how local-first AI is evolving.', 26);
+    await sleep(500);
+    m = add('d'); await type($('span', m), 'Searching online... reading 3 sources...', 22);
+    await sleep(900);
+    await type($('span', m), 'Summary ready. Smaller local models are getting capable enough for daily work. I cited each source below.', 14);
+    await sleep(6000);
+  }
+})();
+
+boot();
+})();
+</script>
+</body>
+</html>
